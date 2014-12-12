@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Todo App</title>
+</head>
+
+<body>
+
+    <div>
+        <h2>Todos</h2>
+        <input type="text" id="text">
+        <input id="add" type="button" value="+ Add new">
+
+        <ul id="showAll"></ul>
+    </div>
+
+    <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="DataManager.js"></script>
+
+    <script>
+    var options = {
+        connection: 'http://localhost:2000',
+        connectCB: connectCB,
+        collections: [{
+            'name': 'todos',
+            'subscribers': {
+                'allTodos': renderAllTodos
+            },
+        }]
+    };
+
+    var dm = new DataManager(options);
+
+    function connectCB() {
+        console.log('connected');
+    }
+
+    function renderAllTodos(data) {
+        var html = '';
+        if (!data) return;
+        data.forEach(function(k) {
+            html += '<li>' + k.name + ' [<a href="javascript:" data-name="' + k.name + '" data-id="' + k.id + '" class="edit-todo">Edit</a>] [<a href="javascript:" data-id="' + k.id + '" class="remove-todo">Remove</a>]</li>';
+        });
+        $('#showAll').html(html);
+
+        // bind event listeners
+        $('.remove-todo').on('click', removeTodo);
+        $('.edit-todo').on('click', editTodo);
+    }
+
+    $('#add').click(saveTodo);
+
+    function saveTodo() {
+        dm.pubData('todos', 'saveTodo', {
+            id: Math.ceil(Math.random() * 1000),
+            name: $('#text').val()
+        }, function(savedToLocal) {
+            console.log('savedToLocal : ', savedToLocal);
+        });
+        $('#text').val('');
+    }
+
+    function editTodo() {
+        var name = $(this).data('name');
+        var id = $(this).data('id');
+        var updatedName = prompt('Update ' + name);
+
+        if (updatedName && updatedName != name) {
+            dm.pubData('todos', 'updateTodo', {
+                id: id,
+                name: updatedName
+            }, function(savedToLocal) {
+                console.log('savedToLocal : ', savedToLocal);
+            });
+        }
+    }
+
+    function removeTodo() {
+        dm.pubData('todos', 'deleteTodo', {
+            id: $(this).data('id')
+        }, function(savedToLocal) {
+            console.log('savedToLocal : ', savedToLocal);
+        });
+    }
+    </script>
+
+</body>
+
+</html>
